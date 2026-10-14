@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LabCIB // The Matrix</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
+<style>
+  :root {
+    --green: #00ff41;
+    --green-dim: #008f11;
+    --bg: #000;
+    --red: #ff2a2a;
+    --blue: #2a8cff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--green); overflow-x: hidden; }
+  body { font-family: "Courier New", ui-monospace, Menlo, monospace; }
+  #rain { position: fixed; inset: 0; z-index: 0; }
+  .wrap {
+    position: relative; z-index: 1; min-height: 100%;
+    display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+  }
+  .terminal {
+    width: 100%; max-width: 640px;
+    background: rgba(0, 10, 0, .82);
+    border: 1px solid var(--green-dim);
+    box-shadow: 0 0 24px rgba(0,255,65,.35), inset 0 0 40px rgba(0,255,65,.06);
+    border-radius: 6px; padding: 22px;
+    backdrop-filter: blur(2px);
+  }
+  .bar { display: flex; gap: 6px; margin-bottom: 14px; }
+  .bar i { width: 11px; height: 11px; border-radius: 50%; background: var(--green-dim); display: block; }
+  h1 {
+    margin: 0 0 4px; font-size: clamp(22px, 6vw, 34px); letter-spacing: 2px;
+    text-shadow: 0 0 8px var(--green);
+  }
+  .glitch { position: relative; display: inline-block; }
+  .glitch::before, .glitch::after {
+    content: attr(data-text); position: absolute; left: 0; top: 0; width: 100%;
+    overflow: hidden; opacity: .8;
+  }
+  .glitch::before { color: var(--red); animation: g1 3s infinite linear alternate-reverse; }
+  .glitch::after  { color: var(--blue); animation: g2 2.5s infinite linear alternate-reverse; }
+  @keyframes g1 { 0%,92%{clip-path: inset(0 0 100% 0);transform:none} 93%{clip-path: inset(10% 0 60% 0);transform:translate(-3px,0)} 96%{clip-path: inset(50% 0 20% 0);transform:translate(3px,0)} 100%{clip-path: inset(0 0 100% 0)} }
+  @keyframes g2 { 0%,90%{clip-path: inset(0 0 100% 0);transform:none} 92%{clip-path: inset(70% 0 5% 0);transform:translate(3px,0)} 95%{clip-path: inset(20% 0 50% 0);transform:translate(-3px,0)} 100%{clip-path: inset(0 0 100% 0)} }
+  .sub { color: var(--green-dim); font-size: 13px; margin: 0 0 18px; }
+  #log { min-height: 110px; font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+  #log .err { color: var(--red); text-shadow: 0 0 6px rgba(255,42,42,.6); }
+  #log .ok  { color: #b6ffc8; text-shadow: 0 0 8px var(--green); }
+  .cursor { display: inline-block; width: 9px; height: 1em; background: var(--green); vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  form { display: flex; align-items: center; gap: 8px; margin-top: 16px; border-top: 1px dashed var(--green-dim); padding-top: 16px; flex-wrap: wrap; }
+  form label { white-space: nowrap; }
+  input {
+    flex: 1 1 220px; min-width: 0;
+    background: transparent; border: none; border-bottom: 1px solid var(--green-dim);
+    color: var(--green); font: inherit; font-size: 16px; padding: 8px 2px; outline: none;
+    caret-color: var(--green);
+  }
+  input:focus { border-bottom-color: var(--green); box-shadow: 0 2px 0 -1px var(--green); }
+  input::placeholder { color: #0a5c1a; }
+  .pills { display: flex; gap: 10px; width: 100%; margin-top: 4px; }
+  button {
+    flex: 1; font: inherit; font-weight: bold; letter-spacing: 1px; cursor: pointer;
+    padding: 10px 12px; border-radius: 999px; border: 1px solid; background: transparent;
+    transition: transform .1s, box-shadow .2s;
+  }
+  button:active { transform: scale(.97); }
+  .red  { color: var(--red);  border-color: var(--red); }
+  .red:hover  { box-shadow: 0 0 14px var(--red); }
+  .blue { color: var(--blue); border-color: var(--blue); }
+  .blue:hover { box-shadow: 0 0 14px var(--blue); }
+  .stats { margin-top: 14px; font-size: 12px; color: var(--green-dim); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+  .win .terminal { border-color: var(--green); box-shadow: 0 0 50px var(--green); }
+  #flash { position: fixed; inset: 0; background: var(--red); opacity: 0; pointer-events: none; z-index: 2; transition: opacity .25s; }
+  #flash.on { opacity: .25; }
+  .scan { pointer-events: none; position: fixed; inset: 0; z-index: 3;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); }
+</style>
+</head>
+<body>
+<canvas id="rain"></canvas>
+<div id="flash"></div>
+<div class="scan"></div>
+
+<main class="wrap">
+  <section class="terminal" id="term">
+    <div class="bar"><i></i><i></i><i></i></div>
+    <h1><span class="glitch" data-text="WAKE UP, HACKER">WAKE UP, HACKER</span></h1>
+    <p class="sub">// LabCIB · nodo de verificación de flags · zion.labcib.local</p>
+    <div id="log"></div>
+    <form id="f" autocomplete="off">
+      <label for="flag">root@zion:~$</label>
+      <input id="flag" name="flag" placeholder="labcib{...}" spellcheck="false" autocapitalize="off">
+      <div class="pills">
+        <button type="submit" class="red">💊 PASTILLA ROJA</button>
+        <button type="button" class="blue" id="blue">💊 PASTILLA AZUL</button>
+      </div>
+    </form>
+    <div class="stats"><span>intentos: <b id="tries">0</b></span><span id="agent">agentes en la red: 3</span></div>
+  </section>
+</main>
+
+<script>
+// Solo guardamos el hash SHA-256 de la flag: ver el código fuente no te la regala ;)
+const FLAG_HASH = "d50a7a91c99eb4bf1504f8825d65616e2e720dd01d74d6ddaae4c616474c33a6";
+
+/* ---------- lluvia matrix ---------- */
+const cv = document.getElementById("rain"), cx = cv.getContext("2d");
+const glyphs = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン0123456789LABCIB{}_$#";
+let cols, drops, fs = 16, rainColor = "#00ff41";
+function resize() {
+  cv.width = innerWidth; cv.height = innerHeight;
+  cols = Math.floor(cv.width / fs);
+  drops = Array.from({ length: cols }, () => Math.random() * -50);
+}
+addEventListener("resize", resize); resize();
+function draw() {
+  cx.fillStyle = "rgba(0,0,0,0.06)"; cx.fillRect(0, 0, cv.width, cv.height);
+  cx.font = fs + "px monospace";
+  for (let i = 0; i < cols; i++) {
+    const ch = glyphs[Math.floor(Math.random() * glyphs.length)];
+    const y = drops[i] * fs;
+    cx.fillStyle = Math.random() > 0.975 ? "#d6ffe0" : rainColor;
+    cx.fillText(ch, i * fs, y);
+    if (y > cv.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  }
+}
+setInterval(draw, 45);
+
+/* ---------- terminal ---------- */
+const log = document.getElementById("log");
+let typing = Promise.resolve();
+function type(text, cls = "", speed = 22) {
+  typing = typing.then(() => new Promise(res => {
+    const line = document.createElement("div");
+    if (cls) line.className = cls;
+    log.appendChild(line);
+    let i = 0;
+    const cur = document.createElement("span"); cur.className = "cursor";
+    (function step() {
+      line.textContent = text.slice(0, ++i);
+      line.appendChild(cur);
+      if (i < text.length) setTimeout(step, speed);
+      else { cur.remove(); res(); }
+    })();
+    while (log.children.length > 8) log.firstChild.remove();
+  }));
+  return typing;
+}
+
+type("> Conexión establecida con la Matrix...");
+type("> El GTA VI salió gratis... ¿o eso es lo que quieren que creas?");
+type("> Ingresa la flag para despertar. Sigue al conejo blanco 🐇");
+
+const fails = [
+  "ACCESO DENEGADO. El Agente Smith se ríe de ti.",
+  "Error 404: realidad no encontrada. Prueba otra vez.",
+  "Eso es un déjà vu... un gato negro pasó dos veces. Flag incorrecta.",
+  "No hay cuchara. Tampoco hay flag correcta ahí.",
+  "Morfeo está decepcionado. Muy decepcionado.",
+  "Los centinelas detectaron tu intento. Corre... y reintenta.",
+  "Casi, Neo. Pero no. (mentira, ni cerca quizás)",
+  "Oráculo dice: 'no eres el elegido... todavía'.",
+  "El Arquitecto anotó tu intento #{n} en su pizarra infinita."
+];
+const blueMsgs = [
+  "Elegiste la pastilla azul. Despiertas en tu cama creyendo que GTA VI es gratis. Fin. (Vuelve y toma la roja 😉)",
+  "Pastilla azul... cobarde. El conejo blanco te bloqueó en todas las redes.",
+  "La ignorancia es felicidad, decía Cypher. Mira cómo le fue."
+];
+
+const form = document.getElementById("f"), input = document.getElementById("flag");
+const term = document.getElementById("term"), flash = document.getElementById("flash");
+const triesEl = document.getElementById("tries"), agentEl = document.getElementById("agent");
+let tries = 0, solved = false;
+
+async function sha256(s) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  if (solved) return;
+  const v = input.value.trim();
+  if (!v) { type("> Escribe algo, no puedes hackear con la mente (aún).", "err"); return; }
+  tries++; triesEl.textContent = tries;
+  agentEl.textContent = "agentes en la red: " + (3 + tries);
+  type("> verificando " + "█".repeat(Math.min(v.length, 24)) + " ...", "", 12);
+  const ok = (await sha256(v)) === FLAG_HASH;
+  if (ok) return win(v);
+  const msg = fails[Math.floor(Math.random() * fails.length)].replace("{n}", tries);
+  type("✗ " + msg, "err");
+  term.classList.remove("shake"); void term.offsetWidth; term.classList.add("shake");
+  flash.classList.add("on"); setTimeout(() => flash.classList.remove("on"), 180);
+  rainColor = "#ff2a2a"; setTimeout(() => rainColor = "#00ff41", 600);
+  input.select();
+});
+
+document.getElementById("blue").addEventListener("click", () => {
+  type("~ " + blueMsgs[Math.floor(Math.random() * blueMsgs.length)]);
+  rainColor = "#2a8cff"; setTimeout(() => rainColor = "#00ff41", 900);
+});
+
+function win(v) {
+  solved = true;
+  input.disabled = true;
+  document.body.classList.add("win");
+  fs = 20; resize();
+  rainColor = "#b6ffc8";
+  type("✓ FLAG CORRECTA. Has sido desconectado de la Matrix.", "ok");
+  type("✓ " + v, "ok", 35);
+  type("> Bienvenido al mundo real, elegido. 🕶️  (" + tries + " intento" + (tries === 1 ? "" : "s") + ")", "ok");
+  type("> Tip: el GTA VI nunca es gratis. Cuidado con lo que descargas.", "ok");
+}
+</script>
+</body>
+</html>
